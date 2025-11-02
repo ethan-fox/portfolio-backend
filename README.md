@@ -116,34 +116,9 @@ This project uses pytest for testing with coverage reporting via pytest-cov.
 pytest
 ```
 
-### Run tests with verbose output
-```bash
-pytest -v
-```
-
-### Run specific test file
-```bash
-pytest tests/service/test_preview_signup_service.py
-```
-
-### Run specific test class
-```bash
-pytest tests/service/test_preview_signup_service.py::TestPreviewSignupService
-```
-
-### Run specific test method
-```bash
-pytest tests/service/test_preview_signup_service.py::TestPreviewSignupService::test_store_signup_with_email_only
-```
-
 ### Generate HTML coverage report
 ```bash
 pytest --cov-report=html
 ```
 
-The HTML report will be generated in the `htmlcov/` directory. Open `htmlcov/index.html` in a browser to view detailed coverage information.
-
-### Coverage targets
-- **Target**: 90%+ branch coverage (aspirational)
-- **Tool**: pytest-cov with branch coverage enabled
-- Coverage configuration is defined in `pytest.ini`
+The HTML report will be generated in the `htmlcov/` directory. Open `htmlcov/index.html` in a browser to view detailed coverage information. Coverage configuration is defined in `pytest.ini`

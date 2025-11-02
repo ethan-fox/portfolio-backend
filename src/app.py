@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from src.config.settings import get_settings
-from src.router import hello_router
+from src.router import subscriber_router
 
 settings = get_settings()
 
@@ -10,8 +10,7 @@ def create_app() -> FastAPI:
     """Application factory pattern."""
     app = FastAPI(title=settings.api_title, version=settings.api_version)
 
-    # Register routers
-    app.include_router(hello_router.router)
+    app.include_router(subscriber_router.router)
 
     return app
 

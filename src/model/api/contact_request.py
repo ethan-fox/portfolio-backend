@@ -12,7 +12,6 @@ class ContactRequest(BaseModel):
 
     @model_validator(mode='after')
     def check_contact_method(self):
-        """Validate that at least one of email or phone is provided."""
         if not self.email and not self.phone:
             raise ValueError('At least one of email or phone must be provided')
         return self

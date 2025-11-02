@@ -1,27 +1,28 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, UTC
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.service.preview_signup_service import PreviewSignupService
+from src.service.subscriber_service import SubscriberService
 from src.dao.contact_dao import ContactDAO
 from src.model.api.contact_request import ContactRequest
 from src.model.view.contact_view import ContactView
 from src.model.db.contact_orm import ContactORM
 
 
-class TestPreviewSignupService:
+class TestSubscriberService:
     def setup_method(self):
-        """Setup runs before each test method."""
         # Create mock DAO with spec for type safety
         self.mock_dao = MagicMock(spec=ContactDAO)
         # Instantiate service with mocked dependency
-        self.service = PreviewSignupService(self.mock_dao)
+        self.service = SubscriberService(self.mock_dao)
 
-    def test_store_signup_with_email_only(self):
-        """Test storing a signup with email only (no phone)."""
-        # Arrange
+    @patch('src.service.subscriber_service.datetime')
+    def test_store_signup_with_email_only(self, mock_datetime):
+        frozen_time = datetime(2025, 1, 15, 12, 30, 45, tzinfo=UTC)
+        mock_datetime.now.return_value = frozen_time
+
         contact_request = ContactRequest(
             first_name="John",
             last_name="Doe",
@@ -29,40 +30,41 @@ class TestPreviewSignupService:
         )
 
         mock_contact_id = uuid4()
-        mock_created_at = datetime.utcnow()
         mock_contact_orm = ContactORM(
             id=mock_contact_id,
             first_name="John",
             last_name="Doe",
             email="john.doe@example.com",
             phone=None,
-            created_at=mock_created_at
+            created_at=frozen_time
         )
         self.mock_dao.create.return_value = mock_contact_orm
 
-        # Act
         result = self.service.store_signup(contact_request)
 
-        # Assert - verify DAO was called with correct ORM data
+        mock_datetime.now.assert_called_once_with(UTC)
+
         self.mock_dao.create.assert_called_once()
         created_orm = self.mock_dao.create.call_args[0][0]
         assert created_orm.first_name == "John"
         assert created_orm.last_name == "Doe"
         assert created_orm.email == "john.doe@example.com"
         assert created_orm.phone is None
+        assert created_orm.created_at == frozen_time
 
-        # Assert - verify result is correct ContactView
         assert isinstance(result, ContactView)
         assert result.id == mock_contact_id
         assert result.first_name == "John"
         assert result.last_name == "Doe"
         assert result.email == "john.doe@example.com"
         assert result.phone is None
-        assert result.created_at == mock_created_at
+        assert result.created_at == frozen_time
 
-    def test_store_signup_with_phone_only(self):
-        """Test storing a signup with phone only (no email)."""
-        # Arrange
+    @patch('src.service.subscriber_service.datetime')
+    def test_store_signup_with_phone_only(self, mock_datetime):
+        frozen_time = datetime(2025, 1, 15, 14, 20, 30, tzinfo=UTC)
+        mock_datetime.now.return_value = frozen_time
+
         contact_request = ContactRequest(
             first_name="Jane",
             last_name="Smith",
@@ -70,40 +72,41 @@ class TestPreviewSignupService:
         )
 
         mock_contact_id = uuid4()
-        mock_created_at = datetime.utcnow()
         mock_contact_orm = ContactORM(
             id=mock_contact_id,
             first_name="Jane",
             last_name="Smith",
             email=None,
             phone="+1-555-0123",
-            created_at=mock_created_at
+            created_at=frozen_time
         )
         self.mock_dao.create.return_value = mock_contact_orm
 
-        # Act
         result = self.service.store_signup(contact_request)
 
-        # Assert - verify DAO was called with correct ORM data
+        mock_datetime.now.assert_called_once_with(UTC)
+
         self.mock_dao.create.assert_called_once()
         created_orm = self.mock_dao.create.call_args[0][0]
         assert created_orm.first_name == "Jane"
         assert created_orm.last_name == "Smith"
         assert created_orm.phone == "+1-555-0123"
         assert created_orm.email is None
+        assert created_orm.created_at == frozen_time
 
-        # Assert - verify result is correct ContactView
         assert isinstance(result, ContactView)
         assert result.id == mock_contact_id
         assert result.first_name == "Jane"
         assert result.last_name == "Smith"
         assert result.phone == "+1-555-0123"
         assert result.email is None
-        assert result.created_at == mock_created_at
+        assert result.created_at == frozen_time
 
-    def test_store_signup_with_both_email_and_phone(self):
-        """Test storing a signup with both email and phone."""
-        # Arrange
+    @patch('src.service.subscriber_service.datetime')
+    def test_store_signup_with_both_email_and_phone(self, mock_datetime):
+        frozen_time = datetime(2025, 1, 15, 16, 45, 10, tzinfo=UTC)
+        mock_datetime.now.return_value = frozen_time
+
         contact_request = ContactRequest(
             first_name="Bob",
             last_name="Johnson",
@@ -112,50 +115,45 @@ class TestPreviewSignupService:
         )
 
         mock_contact_id = uuid4()
-        mock_created_at = datetime.utcnow()
         mock_contact_orm = ContactORM(
             id=mock_contact_id,
             first_name="Bob",
             last_name="Johnson",
             email="bob.johnson@example.com",
             phone="+1-555-9999",
-            created_at=mock_created_at
+            created_at=frozen_time
         )
         self.mock_dao.create.return_value = mock_contact_orm
 
-        # Act
         result = self.service.store_signup(contact_request)
 
-        # Assert - verify DAO was called with correct ORM data
+        mock_datetime.now.assert_called_once_with(UTC)
+
         self.mock_dao.create.assert_called_once()
         created_orm = self.mock_dao.create.call_args[0][0]
         assert created_orm.first_name == "Bob"
         assert created_orm.last_name == "Johnson"
         assert created_orm.email == "bob.johnson@example.com"
         assert created_orm.phone == "+1-555-9999"
+        assert created_orm.created_at == frozen_time
 
-        # Assert - verify result is correct ContactView
         assert isinstance(result, ContactView)
         assert result.id == mock_contact_id
         assert result.first_name == "Bob"
         assert result.last_name == "Johnson"
         assert result.email == "bob.johnson@example.com"
         assert result.phone == "+1-555-9999"
-        assert result.created_at == mock_created_at
+        assert result.created_at == frozen_time
 
     def test_store_signup_raises_exception_on_db_failure(self):
-        """Test that database failures propagate as exceptions."""
-        # Arrange
         contact_request = ContactRequest(
             first_name="Error",
             last_name="Test",
             email="error@example.com"
         )
 
-        # Mock DAO to raise SQLAlchemy exception
         self.mock_dao.create.side_effect = SQLAlchemyError("Database connection failed")
 
-        # Act & Assert - verify exception propagates
         with pytest.raises(SQLAlchemyError) as exc_info:
             self.service.store_signup(contact_request)
 
@@ -163,27 +161,20 @@ class TestPreviewSignupService:
         self.mock_dao.create.assert_called_once()
 
     def test_get_all_signups_empty_list(self):
-        """Test getting all signups when database is empty."""
-        # Arrange
         self.mock_dao.get_all.return_value = []
 
-        # Act
         result = self.service.get_all_signups()
 
-        # Assert - verify DAO was called
         self.mock_dao.get_all.assert_called_once()
 
-        # Assert - verify result is empty list
         assert isinstance(result, list)
         assert len(result) == 0
 
     def test_get_all_signups_multiple_contacts(self):
-        """Test getting all signups with multiple contacts in database."""
-        # Arrange
         mock_contact_1_id = uuid4()
         mock_contact_2_id = uuid4()
-        mock_created_at_1 = datetime.utcnow()
-        mock_created_at_2 = datetime.utcnow()
+        mock_created_at_1 = datetime.now(UTC)
+        mock_created_at_2 = datetime.now(UTC)
 
         mock_contacts = [
             ContactORM(
@@ -205,17 +196,13 @@ class TestPreviewSignupService:
         ]
         self.mock_dao.get_all.return_value = mock_contacts
 
-        # Act
         result = self.service.get_all_signups()
 
-        # Assert - verify DAO was called
         self.mock_dao.get_all.assert_called_once()
 
-        # Assert - verify result is list of ContactViews
         assert isinstance(result, list)
         assert len(result) == 2
 
-        # Verify first contact
         assert isinstance(result[0], ContactView)
         assert result[0].id == mock_contact_1_id
         assert result[0].first_name == "Alice"
@@ -224,7 +211,6 @@ class TestPreviewSignupService:
         assert result[0].phone is None
         assert result[0].created_at == mock_created_at_1
 
-        # Verify second contact
         assert isinstance(result[1], ContactView)
         assert result[1].id == mock_contact_2_id
         assert result[1].first_name == "Charlie"
@@ -234,12 +220,8 @@ class TestPreviewSignupService:
         assert result[1].created_at == mock_created_at_2
 
     def test_get_all_signups_raises_exception_on_db_failure(self):
-        """Test that database failures on get_all propagate as exceptions."""
-        # Arrange
-        # Mock DAO to raise SQLAlchemy exception
         self.mock_dao.get_all.side_effect = SQLAlchemyError("Database query failed")
 
-        # Act & Assert - verify exception propagates
         with pytest.raises(SQLAlchemyError) as exc_info:
             self.service.get_all_signups()
 

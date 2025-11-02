@@ -1,15 +1,17 @@
+from datetime import datetime, UTC
+
 from src.dao.contact_dao import ContactDAO
 from src.model.api.contact_request import ContactRequest
 from src.model.view.contact_view import ContactView
 from src.model.db.contact_orm import ContactORM
 
 
-class PreviewSignupService:
-    """Service for managing preview signup contacts."""
+class SubscriberService:
+    """Service for managing subscriber contacts."""
 
     def __init__(self, contact_dao: ContactDAO):
         """
-        Initialize PreviewSignupService.
+        Initialize SubscriberService.
 
         Args:
             contact_dao: ContactDAO instance for database operations
@@ -26,18 +28,16 @@ class PreviewSignupService:
         Returns:
             ContactView: The created contact as a view model
         """
-        # Convert API model to ORM model
         contact_orm = ContactORM(
             first_name=contact_data.first_name,
             last_name=contact_data.last_name,
             phone=contact_data.phone,
-            email=contact_data.email
+            email=contact_data.email,
+            created_at=datetime.now(UTC)
         )
 
-        # Create via DAO
         created_contact = self.contact_dao.create(contact_orm)
 
-        # Convert ORM model to View model
         return ContactView.model_validate(created_contact)
 
     def get_all_signups(self) -> list[ContactView]:
@@ -47,8 +47,6 @@ class PreviewSignupService:
         Returns:
             list[ContactView]: List of all contacts as view models
         """
-        # Get all from DAO
         contacts_orm = self.contact_dao.get_all()
 
-        # Convert ORM models to View models
         return [ContactView.model_validate(contact) for contact in contacts_orm]

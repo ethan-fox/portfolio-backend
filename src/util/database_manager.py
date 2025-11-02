@@ -1,12 +1,12 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
 
 
 class DatabaseManager:
     """
-    Database manager that handles SQLAlchemy engine, sessions, and ORM base.
-    Provides connection pooling and session management.
+    Database manager that handles SQLAlchemy engine and session management.
+    Provides connection pooling and session lifecycle management.
     """
 
     def __init__(self, database_url: str, quiet: bool = False):
@@ -19,24 +19,19 @@ class DatabaseManager:
         """
         self.database_url = database_url
 
-        # Single engine instance with connection pooling
         self.engine = create_engine(
             database_url,
-            pool_pre_ping=True,  # Verify connections before using
-            pool_size=5,         # Max connections in pool
-            max_overflow=10,     # Max overflow connections
-            echo=not quiet       # Invert quiet to get echo value
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=10,
+            echo=not quiet
         )
 
-        # Session factory (private)
         self._session_factory = sessionmaker(
             autocommit=False,
             autoflush=False,
             bind=self.engine
         )
-
-        # Base class for ORM models
-        self.Base = declarative_base()
 
     def _get_session(self) -> Session:
         """
