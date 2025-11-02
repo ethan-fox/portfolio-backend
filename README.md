@@ -1,6 +1,6 @@
 # Portfolio Backend
 
-A FastAPI-based REST API with PostgreSQL database support.
+Backend REST service which supports my Portfolio website. Supports various actions including Contact registration; more to come.
 
 ## Requirements
 
