@@ -1,0 +1,66 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE_NAME: portfolio-api
+  REGISTRY: us-central1-docker.pkg.dev/portfolio-477017/portfolio-images
+
+jobs:
+  deploy:
+    name: Build and Deploy to Cloud Run
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/portfolio-api:${{ steps.version.outputs.VERSION }} .
+          docker tag ${{ env.REGISTRY }}/portfolio-api:${{ steps.version.outputs.VERSION }} ${{ env.REGISTRY }}/portfolio-api:latest
+
+      - name: Push Docker image to Artifact Registry
+        run: |
+          docker push ${{ env.REGISTRY }}/portfolio-api:${{ steps.version.outputs.VERSION }}
+          docker push ${{ env.REGISTRY }}/portfolio-api:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ env.REGISTRY }}/portfolio-api:${{ steps.version.outputs.VERSION }} \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --port=7050 \
+            --service-account=github-actions-deploy@portfolio-477017.iam.gserviceaccount.com
+
+      - name: Show deployment URL
+        run: |
+          echo "Deployment complete!"
+          echo "Service URL: $(gcloud run services describe ${{ env.SERVICE_NAME }} --region=${{ env.REGION }} --format='value(status.url)')"
