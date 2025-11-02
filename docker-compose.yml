@@ -5,8 +5,8 @@ services:
     image: postgres:16-alpine
     container_name: portfolio-postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: admin 
+      POSTGRES_PASSWORD: admin
       POSTGRES_DB: portfolio
     ports:
       - "5432:5432"
@@ -17,6 +17,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Uncomment below to run the full stack with the app in Docker
+  # app:
+  #   build: .
+  #   container_name: portfolio-app
+  #   ports:
+  #     - "7050:7050"
+  #   environment:
+  #     # Override DATABASE_URL to use Docker service name instead of localhost
+  #     DATABASE_URL: postgresql://admin:admin@postgres:5432/portfolio
+  #     ENVIRONMENT: LOCAL
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   volumes:
+  #     - .:/app
 
 volumes:
   db_data:
