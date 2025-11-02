@@ -1,44 +1,14 @@
 # Deployment Guide
 
-This guide covers deploying your FastAPI backend to Google Cloud Run using GitHub Actions.
-
-## Prerequisites
-
-Before deploying, ensure you have:
-- ✅ Completed infrastructure setup with OpenTofu
-- ✅ Service account JSON key downloaded
-- ✅ GitHub repository created
-
-## Setup GitHub Secrets
-
-You need to add two secrets to your GitHub repository:
-
-### 1. Navigate to GitHub Secrets
-
-1. Go to your repository on GitHub
-2. Click **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-
-### 2. Add Required Secrets
-
-#### Secret 1: `GCP_SA_KEY`
-- **Name**: `GCP_SA_KEY`
-- **Value**: Paste the **entire contents** of your service account JSON key file
-  - This is the file you downloaded from GCP Console
-  - Should start with `{` and end with `}`
-  - Include everything, don't modify it
-
-#### Secret 2: `GCP_PROJECT_ID`
-- **Name**: `GCP_PROJECT_ID`
-- **Value**: `portfolio-477017`
+This page covers deploying the backend to GCP Cloud Run using CI with Github Actions.
 
 ## Deployment Workflow
 
 ### How It Works
 
-Deployments are triggered **only when you push a git tag** matching semantic versioning (e.g., `1.0.0`).
+Deployments are triggered **only when you push a git tag** matching [semantic versioning](https://semver.org/) (e.g., `1.0.0`).
 
-Regular commits to any branch will **NOT** trigger deployments.
+Regular commits to any branch will **NOT** trigger deployments, including `master`.
 
 ### Deploy a New Version
 
@@ -55,46 +25,48 @@ git tag 1.0.0
 git push origin 1.0.0
 ```
 
-### Semantic Versioning Guide
-
-Use semantic versioning: `MAJOR.MINOR.PATCH`
-
-- **MAJOR** (`2.0.0`): Breaking changes
-- **MINOR** (`1.1.0`): New features, backward compatible
-- **PATCH** (`1.0.1`): Bug fixes, backward compatible
-
-Examples:
-```bash
-git tag 1.0.0    # Initial release
-git tag 1.0.1    # Bug fix
-git tag 1.1.0    # New feature
-git tag 2.0.0    # Breaking change
-```
-
-### View Deployment Status
-
-1. Go to your GitHub repository
-2. Click the **Actions** tab
-3. You'll see the "Deploy to Cloud Run" workflow running
-4. Click on the workflow run to see detailed logs
-5. Each step shows its progress and any errors
-
 ### Deployment Steps (Automated)
 
 When you push a tag, GitHub Actions will:
 
-1. ✅ Checkout your code
-2. ✅ Extract version from tag
-3. ✅ Authenticate to Google Cloud
-4. ✅ Build Docker image
-5. ✅ Tag image with version (e.g., `portfolio-api:1.0.0`)
-6. ✅ Push to Artifact Registry
-7. ✅ Deploy to Cloud Run
-8. ✅ Display deployment URL
+1. Checkout your code
+2. Extract version from tag
+3. Authenticate to Google Cloud
+4. Build Docker image
+5. Tag image with version (e.g., `portfolio-api:1.0.0`)
+6. Push to Artifact Registry
+7. Deploy to Cloud Run
+8. Display deployment URL
+
+## Rollback
+
+If you need to quickly roll back:
+
+### Rollback from Command Line 
+
+```bash
+# Option 1: Re-push an existing tag
+git push origin 1.0.0 --force
+
+# Option 2: Create new tag from old commit
+git checkout <old-commit-sha>
+git tag 1.0.2
+git push origin 1.0.2
+```
+
+### Rollback via Cloud Console
+
+1. Go to [Cloud Run Console](https://console.cloud.google.com/run)
+2. Click on `portfolio-api` service
+3. Go to **Revisions** tab
+4. Find the previous working revision
+5. Click **⋮** → **Manage traffic**
+6. Set 100% traffic to the previous revision
+7. Click **Save**
 
 ## Post-Deployment
 
-### Verify Deployment
+### Verify
 
 ```bash
 # Check health endpoint
@@ -106,19 +78,9 @@ curl https://portfolio-api-3rri4wydga-uc.a.run.app/health
 
 ### View Live Service
 
-Your API is live at:
+The API is live at:
 ```
 https://portfolio-api-3rri4wydga-uc.a.run.app
-```
-
-### View Logs
-
-```bash
-# View recent logs
-gcloud run services logs read portfolio-api --limit=50 --region=us-central1
-
-# Stream live logs
-gcloud run services logs tail portfolio-api --region=us-central1
 ```
 
 ## Managing Tags
@@ -138,83 +100,6 @@ git tag -d 1.0.0
 # Delete from GitHub
 git push origin :refs/tags/1.0.0
 ```
-
-### Deploy Previous Version (Rollback)
-
-```bash
-# Option 1: Re-push an existing tag
-git push origin 1.0.0 --force
-
-# Option 2: Create new tag from old commit
-git checkout <old-commit-sha>
-git tag 1.0.2
-git push origin 1.0.2
-```
-
-## Rollback via Cloud Run Console
-
-If you need to quickly roll back without redeploying:
-
-1. Go to [Cloud Run Console](https://console.cloud.google.com/run)
-2. Click on `portfolio-api` service
-3. Go to **Revisions** tab
-4. Find the previous working revision
-5. Click **⋮** → **Manage traffic**
-6. Set 100% traffic to the previous revision
-7. Click **Save**
-
-Or via CLI:
-```bash
-# List revisions
-gcloud run revisions list --service=portfolio-api --region=us-central1
-
-# Route 100% traffic to a specific revision
-gcloud run services update-traffic portfolio-api \
-  --to-revisions=portfolio-api-00001-abc=100 \
-  --region=us-central1
-```
-
-## Troubleshooting
-
-### Deployment Fails at Authentication
-
-**Error**: `Authentication failed` or `Invalid credentials`
-
-**Solution**:
-- Verify `GCP_SA_KEY` secret contains the full JSON (including `{}`)
-- Ensure service account key hasn't been deleted in GCP
-- Check project ID matches in the JSON key
-
-### Deployment Fails at Docker Push
-
-**Error**: `denied: Permission denied` or `repository does not exist`
-
-**Solution**:
-- Verify Artifact Registry repository exists: `gcloud artifacts repositories list`
-- Ensure service account has `roles/artifactregistry.writer`
-- Check registry path is correct: `us-central1-docker.pkg.dev/portfolio-477017/portfolio-images`
-
-### Deployment Succeeds but Service Returns 500
-
-**Check Cloud Run logs**:
-```bash
-gcloud run services logs read portfolio-api --limit=50 --region=us-central1
-```
-
-**Common issues**:
-- Database connection failed (check `DATABASE_URL` secret in Secret Manager)
-- App not listening on port 7050
-- Missing environment variables
-- Python dependencies not installed
-
-### Health Check Fails
-
-**Error**: `Service not ready` or `Health check failed`
-
-**Solution**:
-- Verify `/health` endpoint is accessible locally
-- Check app is binding to `0.0.0.0` not `localhost`
-- Ensure port 7050 is correct in Dockerfile and workflow
 
 ## Test Deployment Checklist
 
