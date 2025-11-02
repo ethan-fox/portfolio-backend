@@ -32,29 +32,35 @@ A FastAPI-based REST API with PostgreSQL database support.
 
 5. **Run the application**
    ```bash
+   uvicorn src.app:app --reload
+   ```
+
+   Or alternatively:
+   ```bash
    python src/app.py
    ```
+
+   **Note:** Database migrations run automatically on app startup.
 
 The API will be available at `http://localhost:8000`
 
 API documentation: `http://localhost:8000/docs`
 
-## Project Structure
+## Database Migrations
 
-```
-portfolio-backend/
-├── src/
-│   ├── app.py           # Main application entry point
-│   ├── config/          # Configuration and settings
-│   ├── util/            # Utilities (database, etc.)
-│   ├── dao/             # Data Access Objects
-│   ├── service/         # Service layer
-│   └── router/          # API routers
-├── docker-compose.yml   # Local Postgres setup
-└── requirements.txt     # Python dependencies
+Migrations are managed with Alembic and run automatically on app startup.
+
+### Create a new migration
+```bash
+alembic revision --autogenerate -m "description of changes"
 ```
 
-## Environment Variables
+### Manually run migrations (if needed)
+```bash
+alembic upgrade head
+```
 
-- `ENVIRONMENT`: `LOCAL` or `PROD`
-- `DATABASE_URL`: PostgreSQL connection string
+### Rollback migration
+```bash
+alembic downgrade -1
+```
