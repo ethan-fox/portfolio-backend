@@ -11,8 +11,8 @@ class Environment(str, Enum):
 class Settings(BaseSettings):
     environment: Environment = Environment.LOCAL
     database_url: str
+    api_key: str
 
-    # API Settings
     api_title: str = "Portfolio API"
     api_version: str = "1.0.0"
 
