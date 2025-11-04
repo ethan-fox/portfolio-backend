@@ -6,7 +6,9 @@ from fastapi import Depends
 from src.config.settings import get_settings
 from src.util.database_manager import DatabaseManager
 from src.dao.contact_dao import ContactDAO
+from src.dao.api_key_dao import ApiKeyDAO
 from src.service.subscriber_service import SubscriberService
+from src.service.auth_service import AuthService
 
 settings = get_settings()
 
@@ -30,3 +32,11 @@ def get_contact_dao(db: Session = Depends(get_db)) -> ContactDAO:
 
 def get_subscriber_service(dao: ContactDAO = Depends(get_contact_dao)) -> SubscriberService:
     return SubscriberService(dao)
+
+
+def get_api_key_dao() -> ApiKeyDAO:
+    return ApiKeyDAO([settings.api_key])
+
+
+def get_auth_service(dao: ApiKeyDAO = Depends(get_api_key_dao)) -> AuthService:
+    return AuthService(dao)
