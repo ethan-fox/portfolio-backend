@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from src.config.settings import get_settings
+from src.config.middleware import apply_middleware
 from src.router import health_router, subscriber_router
 
 settings = get_settings()
@@ -9,6 +10,8 @@ settings = get_settings()
 def create_app() -> FastAPI:
     """Application factory pattern."""
     app = FastAPI(title=settings.api_title, version=settings.api_version)
+
+    apply_middleware(app, settings)
 
     app.include_router(health_router.router)
     app.include_router(subscriber_router.router)
