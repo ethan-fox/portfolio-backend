@@ -14,23 +14,37 @@ def verify_api_key(
     api_key: str = Security(api_key_header),
     auth_service: AuthService = Depends(get_auth_service)
 ) -> str:
-    """FastAPI dependency for API key authentication.
+    """FastAPI dependency for authentication.
 
-    In LOCAL environment, browser requests from localhost:5173 bypass API key check.
-    In PROD environment, all requests require valid API key.
+    LOCAL: No authentication required.
+    PROD: Accept either valid API key OR valid load balancer headers.
     """
     if settings.environment == Environment.LOCAL:
-        origin = request.headers.get("origin")
-        referer = request.headers.get("referer")
+        return "local_bypass"
 
-        if origin and origin == "http://localhost:5173":
-            return "browser_bypass"
-        if referer and referer.startswith("http://localhost:5173"):
-            return "browser_bypass"
+    if _is_valid_load_balancer_request(request):
+        return "lb_authenticated"
 
-    if not auth_service.validate_api_key(api_key):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or missing API key"
-        )
-    return api_key
+    if auth_service.validate_api_key(api_key):
+        return api_key
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Invalid authentication: requires API key or load balancer headers"
+    )
+
+
+def _is_valid_load_balancer_request(request: Request) -> bool:
+    """Validate request came through GCP Load Balancer.
+
+    Checks for GCP-specific headers that indicate traffic from Load Balancer.
+    """
+    via = request.headers.get("via", "")
+    proto = request.headers.get("x-forwarded-proto", "")
+    trace = request.headers.get("x-cloud-trace-context")
+
+    return (
+        "google" in via.lower() and
+        proto == "https" and
+        trace is not None
+    )
