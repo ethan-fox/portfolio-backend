@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 
-router = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter(tags=["health"])
 
 
-@router.get("/")
+@router.get("/health")
 async def health_check():
     """
     Health check endpoint for liveness probes.
