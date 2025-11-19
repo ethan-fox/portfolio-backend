@@ -86,7 +86,7 @@ Migrations are managed with Alembic.
 
 ### Create a new migration
 ```bash
-alembic revision --autogenerate -m "description of changes"
+alembic revision --rev-id="01_02_00" -m "description of changes"
 ```
 
 ### Run migrations

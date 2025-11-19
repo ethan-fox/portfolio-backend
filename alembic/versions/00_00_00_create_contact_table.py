@@ -1,6 +1,6 @@
 """create contact table
 
-Revision ID: ddbff40b2844
+Revision ID: 00_00_00 
 Revises:
 Create Date: 2025-11-02 09:00:24.942523
 
@@ -14,7 +14,7 @@ import uuid
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'ddbff40b2844'
+revision: str = '00_00_00'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
