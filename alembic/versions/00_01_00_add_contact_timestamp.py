@@ -1,7 +1,7 @@
 """add contact timestamp
 
-Revision ID: 0_1_0
-Revises: 0_0_0
+Revision ID: 00_01_00
+Revises: 00_00_00
 Create Date: 2025-11-02 09:07:23.287148
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0_1_0'
-down_revision: Union[str, None] = '0_0_0'
+revision: str = '00_01_00'
+down_revision: Union[str, None] = '00_00_00'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
