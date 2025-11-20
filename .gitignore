@@ -17,4 +17,6 @@ ENV/
 *.swo
 db_data/
 
+.coverage
+
 CLAUDE.md

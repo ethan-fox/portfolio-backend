@@ -11,7 +11,8 @@ class Environment(str, Enum):
 class Settings(BaseSettings):
     environment: Environment = Environment.LOCAL
     database_url: str
-    api_key: str
+    google_cloud_project: str = "portfolio-477017"
+    google_oauth_client_id: str
 
     api_title: str = "Portfolio API"
     api_version: str = "1.0.0"
@@ -23,5 +24,4 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    """Dependency function to get cached settings instance."""
     return Settings()
