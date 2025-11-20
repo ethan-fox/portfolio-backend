@@ -4,11 +4,11 @@ from typing import Generator
 from fastapi import Depends
 
 from src.config.settings import get_settings
+from src.dao.user_dao import UserDAO
+from src.service.user_service import UserService
 from src.util.database_manager import DatabaseManager
 from src.dao.contact_dao import ContactDAO
-from src.dao.api_key_dao import ApiKeyDAO
 from src.service.subscriber_service import SubscriberService
-from src.service.auth_service import AuthService
 
 settings = get_settings()
 
@@ -17,7 +17,7 @@ settings = get_settings()
 def get_database_manager() -> DatabaseManager:
     return DatabaseManager(
         database_url=settings.database_url,
-        quiet=settings.environment != "LOCAL"
+        quiet=settings.environment != "LOCAL",  # TODO extract this to settings?
     )
 
 
@@ -30,13 +30,15 @@ def get_contact_dao(db: Session = Depends(get_db)) -> ContactDAO:
     return ContactDAO(db)
 
 
-def get_subscriber_service(dao: ContactDAO = Depends(get_contact_dao)) -> SubscriberService:
+def get_user_dao(db: Session = Depends(get_db)) -> UserDAO:
+    return UserDAO(db)
+
+
+def get_user_service(user_dao: UserDAO = Depends(get_user_dao)) -> UserService:
+    return UserService(user_dao)
+
+
+def get_subscriber_service(
+    dao: ContactDAO = Depends(get_contact_dao),
+) -> SubscriberService:
     return SubscriberService(dao)
-
-
-def get_api_key_dao() -> ApiKeyDAO:
-    return ApiKeyDAO([settings.api_key])
-
-
-def get_auth_service(dao: ApiKeyDAO = Depends(get_api_key_dao)) -> AuthService:
-    return AuthService(dao)
