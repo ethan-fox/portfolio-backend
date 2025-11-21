@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from src.config.settings import get_settings
 from src.config.middleware import apply_middleware
-from src.router import health_router, subscriber_router
+from src.router import health_router, subscriber_router, content_router
 
 settings = get_settings()
 
@@ -15,6 +15,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router.router)
     app.include_router(subscriber_router.router)
+    app.include_router(content_router.router)
 
     return app
 
