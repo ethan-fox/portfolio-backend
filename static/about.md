@@ -18,7 +18,7 @@ _New York, NY_
 
 _Senior Software Engineer, Streaming | March 2023 – Present_
 
-* Architect and produce business logic-heavy middleware for MLB’s flagship product, “MLB.tv”. The distributed system is responsible for delivering live & on-demand baseball games, as well as other non- game video content. At peak, this system has delivered content to over 400,000 concurrent users with a p99 response time of 58 milliseconds.
+* Architect and produce Enterprise middleware for MLB’s flagship product, “MLB.tv”. The distributed system is responsible for delivering live & on-demand baseball games, as well as other non- game video content. At peak, this system has delivered content to over 400,000 concurrent users with a p99 response time of 58 milliseconds.
 * Technical Product Owner and Lead Engineer for a suite of tools which allows Tier-0 technical support to perform incident resolution on backend systems. Also provides a cross-cutting interface for event auditing, health monitoring, disaster recovery, and lower environment testing. Reduced direct on-call Engineer intervention by 75% within 1 month of adoption, and 97% within 6 months.
 * Designed a server-driven client caching framework using GraphQL Subscriptions, allowing Frontend systems to display real-time data changes to users. Reduced programmatic polling to sensitive backend infrastructure by 99.99%, enabling system optimizations which allowed for 10% faster processing speed on business-critical operations.
 * Extended an existing event-driven distributed system to handle new Product domains, representing 300% more traffic and video content for a given day. Proposed & implemented infrastructure extensions to persistence layers and event-driven autoscaling (KEDA) in anticipation of elevated load. The upgraded system handles 165 peak writes per second to Elasticsearch, with a p99 of 15 seconds end-to-end processing time for video availability.
@@ -31,6 +31,7 @@ _Senior Software Engineer, Streaming | March 2023 – Present_
 _New York, NY (Remote)_
 
 _Senior Software Engineer & Technical Lead, Platform Product | March 2022 – January 2023_
+
 _Software Engineer, Platform Product | April 2020 – February 2022_
 
 * Developed domain-driven microservices to enable the automation of processing insurance claims and orders for patients’ prescriptions. Performed foundational work with tools, frameworks, and architecture ideologies recommended by Business & Engineering leadership to assess their value for product vision.
