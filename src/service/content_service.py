@@ -7,8 +7,8 @@ class ContentService:
     def __init__(self, content_dir: str = "static"):
         self.content_dir = Path(content_dir).resolve()
 
-    def get_resume(self) -> ContentView | None:
-        file_path = self.content_dir / "resume.md"
+    def get_about(self) -> ContentView | None:
+        file_path = self.content_dir / "about.md"
 
         if not file_path.exists() or not file_path.is_file():
             return None

@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from src.config.settings import get_settings
 from src.config.middleware import apply_middleware
@@ -16,6 +17,8 @@ def create_app() -> FastAPI:
     app.include_router(health_router.router)
     app.include_router(subscriber_router.router)
     app.include_router(content_router.router)
+
+    app.mount("/img", StaticFiles(directory="static/img"), name="images")
 
     return app
 

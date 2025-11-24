@@ -7,14 +7,14 @@ from src.service.content_service import ContentService
 router = APIRouter(prefix="/content", tags=["content"])
 
 
-@router.get("/resume", response_model=ContentView)
-async def get_resume(service: ContentService = Depends(get_content_service)):
-    result = service.get_resume()
+@router.get("/about", response_model=ContentView)
+async def get_about(service: ContentService = Depends(get_content_service)):
+    result = service.get_about()
 
     if result is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Resume content not found"
+            detail="Content could not be sourced."
         )
 
     return result
