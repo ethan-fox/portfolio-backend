@@ -6,6 +6,7 @@ from fastapi import Depends
 from src.config.settings import get_settings
 from src.dao.user_dao import UserDAO
 from src.service.user_service import UserService
+from src.service.content_service import ContentService
 from src.util.database_manager import DatabaseManager
 from src.dao.contact_dao import ContactDAO
 from src.service.subscriber_service import SubscriberService
@@ -42,3 +43,7 @@ def get_subscriber_service(
     dao: ContactDAO = Depends(get_contact_dao),
 ) -> SubscriberService:
     return SubscriberService(dao)
+
+
+def get_content_service() -> ContentService:
+    return ContentService()
