@@ -17,7 +17,7 @@ def _apply_cors_middleware(app: FastAPI, settings: Settings) -> None:
     TODO: Consider making this environment-aware if we add a secure config system.
     """
     if settings.environment == Environment.LOCAL:
-        allowed_origins = ["http://localhost:5173"]
+        allowed_origins = ["http://localhost:5173", "http://192.168.1.154:5173"]
     else:
         allowed_origins = ["https://ethan-builds.com"]
 
