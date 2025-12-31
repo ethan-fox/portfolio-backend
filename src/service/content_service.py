@@ -16,3 +16,13 @@ class ContentService:
         content = file_path.read_text(encoding="utf-8")
 
         return ContentView(content=content, format="markdown")
+
+    def get_how_to_play(self) -> ContentView | None:
+        file_path = self.content_dir / "how-to-play.md"
+
+        if not file_path.exists() or not file_path.is_file():
+            return None
+
+        content = file_path.read_text(encoding="utf-8")
+
+        return ContentView(content=content, format="markdown")
