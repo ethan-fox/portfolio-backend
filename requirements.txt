@@ -9,3 +9,5 @@ pytest==8.3.3
 pytest-cov==6.0.0
 google-auth==2.23.0
 requests==2.32.5
+polars==1.36.1
+expiringdict==1.2.2

@@ -19,7 +19,11 @@ def _apply_cors_middleware(app: FastAPI, settings: Settings) -> None:
     if settings.environment == Environment.LOCAL:
         allowed_origins = ["http://localhost:5173", "http://192.168.1.154:5173"]
     else:
-        allowed_origins = ["https://ethan-builds.com"]
+        allowed_origins = [
+            "https://ethan-builds.com",
+            "https://three-beasts.com",
+            "https://www.three-beasts.com"
+        ]
 
     app.add_middleware(
         CORSMiddleware,

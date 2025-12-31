@@ -10,6 +10,9 @@ from src.service.content_service import ContentService
 from src.util.database_manager import DatabaseManager
 from src.dao.contact_dao import ContactDAO
 from src.service.subscriber_service import SubscriberService
+from src.dao.baseball_csv_dao import BaseballCSVDAO
+from src.dao.guessr_dao import GuessrDAO
+from src.service.guessr_service import GuessrService
 
 settings = get_settings()
 
@@ -47,3 +50,20 @@ def get_subscriber_service(
 
 def get_content_service() -> ContentService:
     return ContentService()
+
+
+@lru_cache()
+def get_baseball_csv_dao() -> BaseballCSVDAO:
+    """Singleton CSV DAO - loads once per application lifecycle."""
+    return BaseballCSVDAO()
+
+
+def get_guessr_dao(db: Session = Depends(get_db)) -> GuessrDAO:
+    return GuessrDAO(db)
+
+
+def get_guessr_service(
+    guessr_dao: GuessrDAO = Depends(get_guessr_dao),
+    baseball_dao: BaseballCSVDAO = Depends(get_baseball_csv_dao)
+) -> GuessrService:
+    return GuessrService(guessr_dao, baseball_dao)
