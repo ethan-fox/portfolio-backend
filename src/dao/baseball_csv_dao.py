@@ -24,6 +24,9 @@ class BaseballCSVDAO:
         self.fielding_df = pl.read_csv(base_dir / "Fielding.csv").filter(
             pl.col("yearID").is_between(1947, 2024)
         )
+        self.fielding_of_split_df = pl.read_csv(base_dir / "FieldingOFsplit.csv").filter(
+            pl.col("yearID").is_between(1947, 2024)
+        )
         self.teams_df = pl.read_csv(base_dir / "Teams.csv")
 
     def get_top_batting_leaders(self, year: int, league: str, stat: str, top_n: int = 10) -> list[dict]:
@@ -94,11 +97,18 @@ class BaseballCSVDAO:
         """
         Returns starting players for a given position, year, and league.
         Platoon = True if GS < 90, False otherwise.
+        Uses FieldingOFsplit for LF, CF, RF positions.
 
         Returns: [{"name": "Player Name", "platoon": false}, ...]
         """
+        # Choose the correct dataframe based on position
+        if position in ["LF", "CF", "RF"]:
+            source_df = self.fielding_of_split_df
+        else:
+            source_df = self.fielding_df
+
         result = (
-            self.fielding_df
+            source_df
             .filter((pl.col("yearID") == year) & (pl.col("lgID") == league) & (pl.col("POS") == position))
             .sort("GS", descending=True)
             .group_by("teamID")

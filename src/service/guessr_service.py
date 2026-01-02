@@ -169,7 +169,7 @@ class GuessrService:
                     config_key = award
                     config = {"league": league, "award": award}
                 else:
-                    position = rng.choice(["C", "1B", "2B", "3B", "SS"])
+                    position = rng.choice(["C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"])
                     config_key = position
                     config = {"league": league, "position": position}
 
