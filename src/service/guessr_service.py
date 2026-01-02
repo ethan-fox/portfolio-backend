@@ -8,6 +8,7 @@ from src.dao.baseball_csv_dao import BaseballCSVDAO
 from src.model.view.guessr_puzzle_view import GuessrPuzzleView
 from src.model.view.guessr_list_view import GuessrListView
 from src.model.view.guess_validation_view import GuessValidationView
+from src.model.view.batch_guess_validation_view import BatchGuessValidationView
 from src.model.api.guess_item import GuessItem
 from src.model.db.guessr_orm import GuessrORM
 
@@ -47,11 +48,12 @@ class GuessrService:
         guessr_id = puzzles_view[0].id
         return GuessrListView(id=guessr_id, date=str(puzzle_date), puzzles=puzzles_view)
 
-    def validate_guesses(self, guessr_id: int, guesses: list[GuessItem]) -> list[GuessValidationView]:
+    def validate_guesses(self, guessr_id: int, guesses: list[GuessItem]) -> BatchGuessValidationView:
         """
         Batch validation of multiple guesses for a guessr.
         Validates all guesses in a single database query.
         Ensures all puzzle IDs belong to the same guessr (date).
+        Returns individual validation results and overall score.
         """
         guessr_puzzle = self.guessr_dao.get_puzzle_by_id(guessr_id)
         if not guessr_puzzle or guessr_puzzle.puzzle_number != 0:
@@ -75,18 +77,52 @@ class GuessrService:
 
         puzzle_map = {puzzle.id: puzzle for puzzle in puzzles}
 
-        return [self._validate_single_guess(guess, puzzle_map[guess.id]) for guess in guesses]
+        results = [self._validate_single_guess(guess, puzzle_map[guess.id]) for guess in guesses]
+
+        total_score = sum(result.score for result in results)
+        overall_score = total_score + 1
+
+        return BatchGuessValidationView(results=results, overall_score=overall_score)
 
     def _validate_single_guess(self, guess: GuessItem, puzzle: GuessrORM) -> GuessValidationView:
         """
         Private method to validate a single guess against a puzzle.
         Reusable for single or batch validation.
+        Calculates score using exponential decay formula.
         """
+        score = self._calculate_score(puzzle.answer, guess.year)
+
         return GuessValidationView(
             id=guess.id,
             valid=(puzzle.answer == guess.year),
-            correct_answer=puzzle.answer
+            correct_answer=puzzle.answer,
+            score=score
         )
+
+    def _calculate_score(self, correct_answer: int, guess: int) -> int:
+        """
+        Calculate score for a single puzzle guess using exponential decay formula.
+
+        Formula:
+        - Correct (years_off == 0): 33 points
+        - Incorrect (years_off > 0): max(0, 33 - 2^years_off)
+
+        Examples:
+        - Off by 0 years: 33 points
+        - Off by 1 year: 31 points (33 - 2^1 = 31)
+        - Off by 2 years: 29 points (33 - 2^2 = 29)
+        - Off by 3 years: 25 points (33 - 2^3 = 25)
+        - Off by 5 years: 1 point (33 - 2^5 = 1)
+        - Off by 6+ years: 0 points (2^6 = 64 > 33)
+        """
+        years_off = abs(correct_answer - guess)
+
+        if years_off == 0:
+            return 33
+
+        penalty = 2 ** years_off
+        score = 33 - penalty
+        return max(0, score)
 
     def _generate_and_store_puzzles(self, puzzle_date: date) -> list[GuessrPuzzleView]:
         """

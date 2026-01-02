@@ -6,7 +6,7 @@ from src.config.dependency import get_guessr_service, get_content_service
 from src.service.guessr_service import GuessrService
 from src.service.content_service import ContentService
 from src.model.view.guessr_list_view import GuessrListView
-from src.model.view.guess_validation_view import GuessValidationView
+from src.model.view.batch_guess_validation_view import BatchGuessValidationView
 from src.model.view.content_view import ContentView
 from src.model.api.batch_guess_request import BatchGuessRequest
 
@@ -52,7 +52,7 @@ async def get_puzzles(
     return service.get_puzzles_for_date(date)
 
 
-@router.post("/{guessr_id}", response_model=list[GuessValidationView])
+@router.post("/{guessr_id}", response_model=BatchGuessValidationView)
 async def validate_guesses(
     guessr_id: int = Path(..., description="Guessr ID (from GET response)"),
     request: BatchGuessRequest = ...,
@@ -62,6 +62,7 @@ async def validate_guesses(
     Validate multiple year guesses for a guessr.
     Public endpoint - no authentication required.
     Uses guessr ID to lookup the date and validate all puzzle guesses.
+    Returns individual validation results with scores and overall score (1-100 points).
     """
     try:
         return service.validate_guesses(guessr_id, request.guesses)
