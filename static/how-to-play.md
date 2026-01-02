@@ -13,4 +13,4 @@ Here is some helpful info about some of the puzzles you may encounter:
 
 * **Award Voting**: Displays, at most, the Top 10 vote-getters for the award. As an added layer of difficulty, these lists are displayed **out of order**.
 * **Starters**: Provides the player who played the most games at that position for their team in the given season. If a starter played less than 90 games for their team, an additional "(Platoon)" label is presented. (This most often occurs with Catchers) 
-
+* **Rate Stats**: Rate stats (ERA, OPS, etc.) only include players who are **qualified** according to MLB's [official rule book](https://www.mlb.com/glossary/standard-stats/rate-stats-qualifiers). This means 162 Innings Pitched or 502 Plate Appearances.

@@ -53,13 +53,22 @@ class BaseballCSVDAO:
         """
         Returns top pitchers by stat for a given year and league.
         ERA sorts ascending (lower is better).
+        ERA requires minimum IPOuts > 486 (162 innings) for qualification.
 
         Returns: [{"name": "Player Name", "value": 2.28}, ...]
         """
         descending = (stat != "ERA")
+
+        # Apply minimum innings filter for ERA
+        filtered_df = self.pitching_df.filter(
+            (pl.col("yearID") == year) & (pl.col("lgID") == league)
+        )
+
+        if stat == "ERA":
+            filtered_df = filtered_df.filter(pl.col("IPouts") > 486)
+
         result = (
-            self.pitching_df
-            .filter((pl.col("yearID") == year) & (pl.col("lgID") == league))
+            filtered_df
             .sort(stat, descending=descending)
             .head(top_n)
             .join(self.people_df, on="playerID", how="left")
