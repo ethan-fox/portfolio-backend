@@ -12,5 +12,5 @@ Each puzzle contains 2 primary segments you should pay attention to:
 Here is some helpful info about some of the puzzles you may encounter:
 
 * **Award Voting**: Displays, at most, the Top 10 vote-getters for the award. As an added layer of difficulty, these lists are displayed **out of order**.
-* **Starters**: Provides the player who played the most games at that position for their team in the given season. If someone is considered a "starter" at the position but played less than 90 games for their team, an additional "(Platoon)" label is assigned next to their name. You will most often see this for Catcher starters.
+* **Starters**: Provides the player who played the most games at that position for their team in the given season. If someone is considered a "starter" at the position but played less than 90 games for their team, an additional "(Platoon)" label is assigned next to their name. (This most often occurs with Catchers) 
 
