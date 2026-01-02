@@ -10,7 +10,7 @@ from src.model.view.guessr_list_view import GuessrListView
 from src.model.view.guess_validation_view import GuessValidationView
 from src.model.view.batch_guess_validation_view import BatchGuessValidationView
 from src.model.api.guess_item import GuessItem
-from src.model.db.guessr_orm import GuessrORM
+from src.model.db.guessr_orm import GuessrORM, GuessrPuzzleORM
 
 
 class GuessrService:
@@ -29,54 +29,52 @@ class GuessrService:
         """
         Get 3 puzzles for a specific date.
         Flow: Cache → DB → Generate
-        Returns guessr ID (ID of first puzzle) along with puzzles.
+        Returns guessr ID along with puzzles.
         """
+        # Check cache
         cached = self._get_from_cache(puzzle_date)
         if cached:
-            guessr_id = cached[0].id
-            return GuessrListView(id=guessr_id, date=str(puzzle_date), puzzles=cached)
+            guessr = self.guessr_dao.get_guessr_by_date(puzzle_date)
+            if guessr:
+                return GuessrListView(id=guessr.id, date=str(puzzle_date), puzzles=cached)
 
-        puzzles_orm = self.guessr_dao.get_puzzles_by_date(puzzle_date)
-        if len(puzzles_orm) == 3:
-            puzzles_view = self._transform_to_views(puzzles_orm)
-            self._put_in_cache(puzzle_date, puzzles_view)
-            guessr_id = puzzles_orm[0].id
-            return GuessrListView(id=guessr_id, date=str(puzzle_date), puzzles=puzzles_view)
+        # Check DB
+        guessr = self.guessr_dao.get_guessr_by_date(puzzle_date)
+        if guessr:
+            puzzles_orm = self.guessr_dao.get_puzzles_by_guessr_id(guessr.id)
+            if len(puzzles_orm) == 3:
+                puzzles_view = self._transform_to_views(puzzles_orm)
+                self._put_in_cache(puzzle_date, puzzles_view)
+                return GuessrListView(id=guessr.id, date=str(puzzle_date), puzzles=puzzles_view)
 
-        puzzles_view = self._generate_and_store_puzzles(puzzle_date)
+        # Generate
+        guessr, puzzles_view = self._generate_and_store_guessr(puzzle_date)
         self._put_in_cache(puzzle_date, puzzles_view)
-        guessr_id = puzzles_view[0].id
-        return GuessrListView(id=guessr_id, date=str(puzzle_date), puzzles=puzzles_view)
+        return GuessrListView(id=guessr.id, date=str(puzzle_date), puzzles=puzzles_view)
 
     def validate_guesses(self, guessr_id: int, guesses: list[GuessItem]) -> BatchGuessValidationView:
         """
         Batch validation of multiple guesses for a guessr.
-        Validates all guesses in a single database query.
-        Ensures all puzzle IDs belong to the same guessr (date).
-        Returns individual validation results and overall score.
         """
-        guessr_puzzle = self.guessr_dao.get_puzzle_by_id(guessr_id)
-        if not guessr_puzzle or guessr_puzzle.puzzle_number != 0:
+        # Step 1: Get guessr
+        guessr = self.guessr_dao.get_guessr_by_id(guessr_id)
+        if not guessr:
             raise ValueError(f"Guessr {guessr_id} not found")
 
-        puzzle_date = guessr_puzzle.date
+        # Step 2: Get all puzzles for this guessr
+        puzzles = self.guessr_dao.get_puzzles_by_guessr_id(guessr_id)
+        if len(puzzles) != 3:
+            raise ValueError(f"Expected 3 puzzles for guessr {guessr_id}, found {len(puzzles)}")
 
-        puzzles = self.guessr_dao.get_puzzles_by_ids([g.id for g in guesses])
+        # Step 3: Map by puzzle_number
+        puzzle_map = {puzzle.puzzle_number: puzzle for puzzle in puzzles}
 
-        if len(puzzles) != len(guesses):
-            found_ids = {puzzle.id for puzzle in puzzles}
-            missing_ids = {g.id for g in guesses if g.id not in found_ids}
-            raise ValueError(f"Puzzles not found: {missing_ids}")
+        # Step 4: Validate guess IDs
+        for guess in guesses:
+            if guess.id not in puzzle_map:
+                raise ValueError(f"Invalid puzzle_number {guess.id} for guessr {guessr_id}")
 
-        for puzzle in puzzles:
-            if puzzle.date != puzzle_date:
-                raise ValueError(
-                    f"Puzzle {puzzle.id} belongs to {puzzle.date}, not {puzzle_date}. "
-                    f"All puzzle IDs must match the requested guessr date."
-                )
-
-        puzzle_map = {puzzle.id: puzzle for puzzle in puzzles}
-
+        # Step 5: Validate and score
         results = [self._validate_single_guess(guess, puzzle_map[guess.id]) for guess in guesses]
 
         total_score = sum(result.score for result in results)
@@ -84,10 +82,9 @@ class GuessrService:
 
         return BatchGuessValidationView(results=results, overall_score=overall_score)
 
-    def _validate_single_guess(self, guess: GuessItem, puzzle: GuessrORM) -> GuessValidationView:
+    def _validate_single_guess(self, guess: GuessItem, puzzle: GuessrPuzzleORM) -> GuessValidationView:
         """
         Private method to validate a single guess against a puzzle.
-        Reusable for single or batch validation.
         Calculates score using exponential decay formula.
         """
         score = self._calculate_score(puzzle.answer, guess.year)
@@ -124,10 +121,15 @@ class GuessrService:
         score = 33 - penalty
         return max(0, score)
 
-    def _generate_and_store_puzzles(self, puzzle_date: date) -> list[GuessrPuzzleView]:
+    def _generate_and_store_guessr(self, puzzle_date: date) -> tuple[GuessrORM, list[GuessrPuzzleView]]:
         """
-        Generate 3 puzzles with deterministic seeding and 365-day uniqueness.
+        Generate and store a complete guessr (1 guessr + 3 puzzles).
+        Returns the guessr and view representations of puzzles.
         """
+        # Step 1: Create guessr
+        guessr = self.guessr_dao.create_guessr(puzzle_date, datetime.now(UTC))
+
+        # Step 2: Check for duplicate configs in past 365 days
         past_puzzles = self.guessr_dao.get_puzzles_in_date_range(
             start_date=puzzle_date - timedelta(days=365),
             end_date=puzzle_date - timedelta(days=1)
@@ -183,8 +185,8 @@ class GuessrService:
             else:
                 players = self.baseball_dao.get_starters_for_position(answer, league, config["position"])
 
-            puzzle_orm = GuessrORM(
-                date=puzzle_date,
+            puzzle_orm = GuessrPuzzleORM(
+                guessr_id=guessr.id,
                 puzzle_number=puzzle_number,
                 puzzle_type=puzzle_type,
                 answer=answer,
@@ -195,21 +197,21 @@ class GuessrService:
             try:
                 created_puzzle = self.guessr_dao.create_puzzle(puzzle_orm)
             except IntegrityError:
-                created_puzzle = self.guessr_dao.get_puzzle_by_date_and_number(puzzle_date, puzzle_number)
+                created_puzzle = self.guessr_dao.get_puzzle_by_guessr_and_number(guessr.id, puzzle_number)
                 if not created_puzzle:
                     raise RuntimeError(f"Race condition: puzzle should exist but not found")
 
             puzzle_view = GuessrPuzzleView(
-                id=created_puzzle.id,
+                id=created_puzzle.puzzle_number,
                 puzzle_type=created_puzzle.puzzle_type,
                 hints=created_puzzle.config,
                 players=players
             )
             puzzle_views.append(puzzle_view)
 
-        return puzzle_views
+        return guessr, puzzle_views
 
-    def _transform_to_views(self, puzzles_orm: list[GuessrORM]) -> list[GuessrPuzzleView]:
+    def _transform_to_views(self, puzzles_orm: list[GuessrPuzzleORM]) -> list[GuessrPuzzleView]:
         """
         Transform ORM puzzles to view models.
         Fetches player data from CSV DAO based on config.
@@ -238,7 +240,7 @@ class GuessrService:
                 )
 
             views.append(GuessrPuzzleView(
-                id=orm.id,
+                id=orm.puzzle_number,
                 puzzle_type=orm.puzzle_type,
                 hints=config,
                 players=players

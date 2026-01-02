@@ -62,7 +62,7 @@ async def validate_guesses(
     Validate multiple year guesses for a guessr.
     Public endpoint - no authentication required.
     Uses guessr ID to lookup the date and validate all puzzle guesses.
-    Returns individual validation results with scores and overall score (1-100 points).
+    Returns individual validation results with scores (0-33 per puzzle) and overall score (1-100 points total).
     """
     try:
         return service.validate_guesses(guessr_id, request.guesses)

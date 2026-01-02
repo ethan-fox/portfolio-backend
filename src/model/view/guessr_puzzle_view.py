@@ -6,6 +6,7 @@ class GuessrPuzzleView(BaseModel):
     """
     Response model for a single puzzle.
     NEVER exposes answer in GET response - only exposed in POST validation.
+    'id' represents the puzzle_number (0, 1, or 2).
     """
     model_config = ConfigDict(from_attributes=True)
 

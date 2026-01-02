@@ -1,12 +1,12 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from datetime import date
+from datetime import date, datetime
 
-from src.model.db.guessr_orm import GuessrORM
+from src.model.db.guessr_orm import GuessrORM, GuessrPuzzleORM
 
 
 class GuessrDAO:
-    """Data Access Object for Guessr puzzles."""
+    """Data Access Object for Guessr and GuessrPuzzle entities."""
 
     def __init__(self, db: Session):
         """
@@ -17,31 +17,62 @@ class GuessrDAO:
         """
         self.db = db
 
-    def get_puzzles_by_date(self, puzzle_date: date) -> list[GuessrORM]:
+    def create_guessr(self, puzzle_date: date, created_at: datetime) -> GuessrORM:
         """
-        Get all 3 puzzles for a specific date.
+        Create a new guessr (daily puzzle set) for a given date.
 
         Args:
-            puzzle_date: Date to query puzzles for
+            puzzle_date: Date for the guessr
+            created_at: Timestamp for creation
 
         Returns:
-            List of GuessrORM instances ordered by puzzle_number
+            GuessrORM: The created guessr with its ID
+
+        Raises:
+            IntegrityError: If guessr for this date already exists
+        """
+        guessr = GuessrORM(date=puzzle_date, created_at=created_at)
+        self.db.add(guessr)
+        self.db.flush()  # Get the ID without committing
+        return guessr
+
+    def get_guessr_by_id(self, guessr_id: int) -> GuessrORM | None:
+        """
+        Get a guessr by its ID.
+
+        Args:
+            guessr_id: Integer ID of the guessr
+
+        Returns:
+            GuessrORM if found, None otherwise
+        """
+        return self.db.query(GuessrORM)\
+            .filter(GuessrORM.id == guessr_id)\
+            .first()
+
+    def get_guessr_by_date(self, puzzle_date: date) -> GuessrORM | None:
+        """
+        Get a guessr by its date.
+
+        Args:
+            puzzle_date: Date of the guessr
+
+        Returns:
+            GuessrORM if found, None otherwise
         """
         return self.db.query(GuessrORM)\
             .filter(GuessrORM.date == puzzle_date)\
-            .order_by(GuessrORM.puzzle_number)\
-            .all()
+            .first()
 
-    def create_puzzle(self, puzzle: GuessrORM) -> GuessrORM:
+    def create_puzzle(self, puzzle: GuessrPuzzleORM) -> GuessrPuzzleORM:
         """
-        Create a new puzzle in the database.
-        Raises IntegrityError if duplicate (race condition).
+        Create a new puzzle for a guessr.
 
         Args:
-            puzzle: GuessrORM instance to create
+            puzzle: GuessrPuzzleORM instance to create
 
         Returns:
-            GuessrORM: The created puzzle
+            GuessrPuzzleORM: The created puzzle
 
         Raises:
             IntegrityError: If unique constraint violated
@@ -55,52 +86,39 @@ class GuessrDAO:
             self.db.rollback()
             raise
 
-    def get_puzzle_by_id(self, puzzle_id: int) -> GuessrORM | None:
+    def get_puzzles_by_guessr_id(self, guessr_id: int) -> list[GuessrPuzzleORM]:
         """
-        Get a puzzle by ID.
+        Get all puzzles (should be 3) for a guessr.
 
         Args:
-            puzzle_id: Integer ID of the puzzle
+            guessr_id: Integer ID of the guessr
 
         Returns:
-            GuessrORM if found, None otherwise
+            List of GuessrPuzzleORM instances ordered by puzzle_number
         """
-        return self.db.query(GuessrORM)\
-            .filter(GuessrORM.id == puzzle_id)\
-            .first()
-
-    def get_puzzles_by_ids(self, puzzle_ids: list[int]) -> list[GuessrORM]:
-        """
-        Get multiple puzzles by their IDs (for batch validation).
-
-        Args:
-            puzzle_ids: List of puzzle integer IDs
-
-        Returns:
-            List of GuessrORM instances
-        """
-        return self.db.query(GuessrORM)\
-            .filter(GuessrORM.id.in_(puzzle_ids))\
+        return self.db.query(GuessrPuzzleORM)\
+            .filter(GuessrPuzzleORM.guessr_id == guessr_id)\
+            .order_by(GuessrPuzzleORM.puzzle_number)\
             .all()
 
-    def get_puzzle_by_date_and_number(self, puzzle_date: date, puzzle_number: int) -> GuessrORM | None:
+    def get_puzzle_by_guessr_and_number(self, guessr_id: int, puzzle_number: int) -> GuessrPuzzleORM | None:
         """
-        Get a specific puzzle by date and puzzle number.
+        Get a specific puzzle by guessr ID and puzzle number.
         Used for race condition handling.
 
         Args:
-            puzzle_date: Date of the puzzle
+            guessr_id: Integer ID of the guessr
             puzzle_number: Puzzle number (0, 1, or 2)
 
         Returns:
-            GuessrORM if found, None otherwise
+            GuessrPuzzleORM if found, None otherwise
         """
-        return self.db.query(GuessrORM)\
-            .filter(GuessrORM.date == puzzle_date)\
-            .filter(GuessrORM.puzzle_number == puzzle_number)\
+        return self.db.query(GuessrPuzzleORM)\
+            .filter(GuessrPuzzleORM.guessr_id == guessr_id)\
+            .filter(GuessrPuzzleORM.puzzle_number == puzzle_number)\
             .first()
 
-    def get_puzzles_in_date_range(self, start_date: date, end_date: date) -> list[GuessrORM]:
+    def get_puzzles_in_date_range(self, start_date: date, end_date: date) -> list[GuessrPuzzleORM]:
         """
         Get all puzzles within a date range (for 365-day uniqueness check).
 
@@ -109,9 +127,10 @@ class GuessrDAO:
             end_date: End of date range (inclusive)
 
         Returns:
-            List of GuessrORM instances
+            List of GuessrPuzzleORM instances
         """
-        return self.db.query(GuessrORM)\
+        return self.db.query(GuessrPuzzleORM)\
+            .join(GuessrORM)\
             .filter(GuessrORM.date >= start_date)\
             .filter(GuessrORM.date <= end_date)\
             .all()

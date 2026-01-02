@@ -1,12 +1,12 @@
 from unittest.mock import MagicMock
-from datetime import date
+from datetime import date, datetime, UTC
 import pytest
 
 from src.service.guessr_service import GuessrService
 from src.dao.guessr_dao import GuessrDAO
 from src.dao.baseball_csv_dao import BaseballCSVDAO
 from src.model.api.guess_item import GuessItem
-from src.model.db.guessr_orm import GuessrORM
+from src.model.db.guessr_orm import GuessrORM, GuessrPuzzleORM
 from src.model.view.batch_guess_validation_view import BatchGuessValidationView
 
 
@@ -57,30 +57,26 @@ class TestGuessrServiceScoring:
     def test_validate_guesses_all_correct(self):
         puzzle_date = date(2025, 1, 15)
 
-        guessr_puzzle = GuessrORM(
-            id=1,
-            date=puzzle_date,
-            puzzle_number=0,
-            puzzle_type="batting_stat",
-            answer=2000,
-            config={"league": "AL", "stat": "HR"}
-        )
-        self.mock_guessr_dao.get_puzzle_by_id.return_value = guessr_puzzle
+        # Mock guessr
+        guessr = GuessrORM(id=42, date=puzzle_date, created_at=datetime.now(UTC))
+        self.mock_guessr_dao.get_guessr_by_id.return_value = guessr
 
+        # Mock puzzles
         puzzles = [
-            GuessrORM(id=1, date=puzzle_date, puzzle_number=0, puzzle_type="batting_stat", answer=2000, config={}),
-            GuessrORM(id=2, date=puzzle_date, puzzle_number=1, puzzle_type="pitching_stat", answer=1998, config={}),
-            GuessrORM(id=3, date=puzzle_date, puzzle_number=2, puzzle_type="award_votes", answer=2010, config={})
+            GuessrPuzzleORM(id=1, guessr_id=42, puzzle_number=0, puzzle_type="batting_stat", answer=2000, config={}, created_at=datetime.now(UTC)),
+            GuessrPuzzleORM(id=2, guessr_id=42, puzzle_number=1, puzzle_type="pitching_stat", answer=1998, config={}, created_at=datetime.now(UTC)),
+            GuessrPuzzleORM(id=3, guessr_id=42, puzzle_number=2, puzzle_type="award_votes", answer=2010, config={}, created_at=datetime.now(UTC))
         ]
-        self.mock_guessr_dao.get_puzzles_by_ids.return_value = puzzles
+        self.mock_guessr_dao.get_puzzles_by_guessr_id.return_value = puzzles
 
+        # Guesses use puzzle_number (0, 1, 2)
         guesses = [
-            GuessItem(id=1, year=2000),
-            GuessItem(id=2, year=1998),
-            GuessItem(id=3, year=2010)
+            GuessItem(id=0, year=2000),
+            GuessItem(id=1, year=1998),
+            GuessItem(id=2, year=2010)
         ]
 
-        result = self.service.validate_guesses(guessr_id=1, guesses=guesses)
+        result = self.service.validate_guesses(guessr_id=42, guesses=guesses)
 
         assert isinstance(result, BatchGuessValidationView)
         assert len(result.results) == 3
@@ -92,30 +88,26 @@ class TestGuessrServiceScoring:
     def test_validate_guesses_mixed_accuracy(self):
         puzzle_date = date(2025, 1, 15)
 
-        guessr_puzzle = GuessrORM(
-            id=1,
-            date=puzzle_date,
-            puzzle_number=0,
-            puzzle_type="batting_stat",
-            answer=2000,
-            config={"league": "AL", "stat": "HR"}
-        )
-        self.mock_guessr_dao.get_puzzle_by_id.return_value = guessr_puzzle
+        # Mock guessr
+        guessr = GuessrORM(id=42, date=puzzle_date, created_at=datetime.now(UTC))
+        self.mock_guessr_dao.get_guessr_by_id.return_value = guessr
 
+        # Mock puzzles
         puzzles = [
-            GuessrORM(id=1, date=puzzle_date, puzzle_number=0, puzzle_type="batting_stat", answer=2000, config={}),
-            GuessrORM(id=2, date=puzzle_date, puzzle_number=1, puzzle_type="pitching_stat", answer=1998, config={}),
-            GuessrORM(id=3, date=puzzle_date, puzzle_number=2, puzzle_type="award_votes", answer=2010, config={})
+            GuessrPuzzleORM(id=1, guessr_id=42, puzzle_number=0, puzzle_type="batting_stat", answer=2000, config={}, created_at=datetime.now(UTC)),
+            GuessrPuzzleORM(id=2, guessr_id=42, puzzle_number=1, puzzle_type="pitching_stat", answer=1998, config={}, created_at=datetime.now(UTC)),
+            GuessrPuzzleORM(id=3, guessr_id=42, puzzle_number=2, puzzle_type="award_votes", answer=2010, config={}, created_at=datetime.now(UTC))
         ]
-        self.mock_guessr_dao.get_puzzles_by_ids.return_value = puzzles
+        self.mock_guessr_dao.get_puzzles_by_guessr_id.return_value = puzzles
 
+        # Mixed guesses
         guesses = [
-            GuessItem(id=1, year=2000),
-            GuessItem(id=2, year=2000),
-            GuessItem(id=3, year=2006)
+            GuessItem(id=0, year=2000),  # Correct: 33
+            GuessItem(id=1, year=2000),  # Off by 2: 29
+            GuessItem(id=2, year=2006)   # Off by 4: 17
         ]
 
-        result = self.service.validate_guesses(guessr_id=1, guesses=guesses)
+        result = self.service.validate_guesses(guessr_id=42, guesses=guesses)
 
         assert isinstance(result, BatchGuessValidationView)
         assert len(result.results) == 3
@@ -125,128 +117,94 @@ class TestGuessrServiceScoring:
         assert result.results[1].score == 29
         assert result.results[2].valid is False
         assert result.results[2].score == 17
-        assert result.overall_score == 80
+        assert result.overall_score == 80  # 33 + 29 + 17 + 1
 
     def test_validate_guesses_all_wrong_zero_scores(self):
         puzzle_date = date(2025, 1, 15)
 
-        guessr_puzzle = GuessrORM(
-            id=1,
-            date=puzzle_date,
-            puzzle_number=0,
-            puzzle_type="batting_stat",
-            answer=2000,
-            config={"league": "AL", "stat": "HR"}
-        )
-        self.mock_guessr_dao.get_puzzle_by_id.return_value = guessr_puzzle
+        # Mock guessr
+        guessr = GuessrORM(id=42, date=puzzle_date, created_at=datetime.now(UTC))
+        self.mock_guessr_dao.get_guessr_by_id.return_value = guessr
 
+        # Mock puzzles
         puzzles = [
-            GuessrORM(id=1, date=puzzle_date, puzzle_number=0, puzzle_type="batting_stat", answer=2000, config={}),
-            GuessrORM(id=2, date=puzzle_date, puzzle_number=1, puzzle_type="pitching_stat", answer=1998, config={}),
-            GuessrORM(id=3, date=puzzle_date, puzzle_number=2, puzzle_type="award_votes", answer=2010, config={})
+            GuessrPuzzleORM(id=1, guessr_id=42, puzzle_number=0, puzzle_type="batting_stat", answer=2000, config={}, created_at=datetime.now(UTC)),
+            GuessrPuzzleORM(id=2, guessr_id=42, puzzle_number=1, puzzle_type="pitching_stat", answer=1998, config={}, created_at=datetime.now(UTC)),
+            GuessrPuzzleORM(id=3, guessr_id=42, puzzle_number=2, puzzle_type="award_votes", answer=2010, config={}, created_at=datetime.now(UTC))
         ]
-        self.mock_guessr_dao.get_puzzles_by_ids.return_value = puzzles
+        self.mock_guessr_dao.get_puzzles_by_guessr_id.return_value = puzzles
 
+        # All wrong (off by 6+ years)
         guesses = [
-            GuessItem(id=1, year=2020),
-            GuessItem(id=2, year=1950),
-            GuessItem(id=3, year=1970)
+            GuessItem(id=0, year=2020),
+            GuessItem(id=1, year=1950),
+            GuessItem(id=2, year=1970)
         ]
 
-        result = self.service.validate_guesses(guessr_id=1, guesses=guesses)
+        result = self.service.validate_guesses(guessr_id=42, guesses=guesses)
 
         assert isinstance(result, BatchGuessValidationView)
         assert len(result.results) == 3
         assert result.results[0].score == 0
         assert result.results[1].score == 0
         assert result.results[2].score == 0
-        assert result.overall_score == 1
+        assert result.overall_score == 1  # 0 + 0 + 0 + 1
 
     def test_validate_guesses_close_misses(self):
         puzzle_date = date(2025, 1, 15)
 
-        guessr_puzzle = GuessrORM(
-            id=1,
-            date=puzzle_date,
-            puzzle_number=0,
-            puzzle_type="batting_stat",
-            answer=2000,
-            config={"league": "AL", "stat": "HR"}
-        )
-        self.mock_guessr_dao.get_puzzle_by_id.return_value = guessr_puzzle
+        # Mock guessr
+        guessr = GuessrORM(id=42, date=puzzle_date, created_at=datetime.now(UTC))
+        self.mock_guessr_dao.get_guessr_by_id.return_value = guessr
 
+        # Mock puzzles
         puzzles = [
-            GuessrORM(id=1, date=puzzle_date, puzzle_number=0, puzzle_type="batting_stat", answer=2000, config={}),
-            GuessrORM(id=2, date=puzzle_date, puzzle_number=1, puzzle_type="pitching_stat", answer=1998, config={}),
-            GuessrORM(id=3, date=puzzle_date, puzzle_number=2, puzzle_type="award_votes", answer=2010, config={})
+            GuessrPuzzleORM(id=1, guessr_id=42, puzzle_number=0, puzzle_type="batting_stat", answer=2000, config={}, created_at=datetime.now(UTC)),
+            GuessrPuzzleORM(id=2, guessr_id=42, puzzle_number=1, puzzle_type="pitching_stat", answer=1998, config={}, created_at=datetime.now(UTC)),
+            GuessrPuzzleORM(id=3, guessr_id=42, puzzle_number=2, puzzle_type="award_votes", answer=2010, config={}, created_at=datetime.now(UTC))
         ]
-        self.mock_guessr_dao.get_puzzles_by_ids.return_value = puzzles
+        self.mock_guessr_dao.get_puzzles_by_guessr_id.return_value = puzzles
 
+        # All off by 1 year
         guesses = [
-            GuessItem(id=1, year=2001),
-            GuessItem(id=2, year=1997),
-            GuessItem(id=3, year=2011)
+            GuessItem(id=0, year=2001),
+            GuessItem(id=1, year=1997),
+            GuessItem(id=2, year=2011)
         ]
 
-        result = self.service.validate_guesses(guessr_id=1, guesses=guesses)
+        result = self.service.validate_guesses(guessr_id=42, guesses=guesses)
 
         assert isinstance(result, BatchGuessValidationView)
         assert len(result.results) == 3
         assert result.results[0].score == 31
         assert result.results[1].score == 31
         assert result.results[2].score == 31
-        assert result.overall_score == 94
+        assert result.overall_score == 94  # 31 + 31 + 31 + 1
 
-    def test_validate_guesses_guessr_id_not_found(self):
-        self.mock_guessr_dao.get_puzzle_by_id.return_value = None
+    def test_validate_guesses_guessr_not_found(self):
+        self.mock_guessr_dao.get_guessr_by_id.return_value = None
 
-        guesses = [GuessItem(id=1, year=2000)]
+        guesses = [GuessItem(id=0, year=2000)]
 
         with pytest.raises(ValueError, match="Guessr 999 not found"):
             self.service.validate_guesses(guessr_id=999, guesses=guesses)
 
-    def test_validate_guesses_invalid_puzzle_number(self):
+    def test_validate_guesses_incomplete_puzzles(self):
         puzzle_date = date(2025, 1, 15)
 
-        invalid_guessr_puzzle = GuessrORM(
-            id=2,
-            date=puzzle_date,
-            puzzle_number=1,
-            puzzle_type="batting_stat",
-            answer=2000,
-            config={"league": "AL", "stat": "HR"}
-        )
-        self.mock_guessr_dao.get_puzzle_by_id.return_value = invalid_guessr_puzzle
+        # Mock guessr
+        guessr = GuessrORM(id=42, date=puzzle_date, created_at=datetime.now(UTC))
+        self.mock_guessr_dao.get_guessr_by_id.return_value = guessr
 
-        guesses = [GuessItem(id=2, year=2000)]
-
-        with pytest.raises(ValueError, match="Guessr 2 not found"):
-            self.service.validate_guesses(guessr_id=2, guesses=guesses)
-
-    def test_validate_guesses_puzzle_ids_mismatch_date(self):
-        puzzle_date = date(2025, 1, 15)
-        different_date = date(2025, 1, 16)
-
-        guessr_puzzle = GuessrORM(
-            id=1,
-            date=puzzle_date,
-            puzzle_number=0,
-            puzzle_type="batting_stat",
-            answer=2000,
-            config={"league": "AL", "stat": "HR"}
-        )
-        self.mock_guessr_dao.get_puzzle_by_id.return_value = guessr_puzzle
-
+        # Mock incomplete puzzles (only 2 puzzles instead of 3)
         puzzles = [
-            GuessrORM(id=1, date=puzzle_date, puzzle_number=0, puzzle_type="batting_stat", answer=2000, config={}),
-            GuessrORM(id=2, date=different_date, puzzle_number=1, puzzle_type="pitching_stat", answer=1998, config={})
+            GuessrPuzzleORM(id=1, guessr_id=42, puzzle_number=0, puzzle_type="batting_stat", answer=2000, config={}, created_at=datetime.now(UTC)),
+            GuessrPuzzleORM(id=2, guessr_id=42, puzzle_number=1, puzzle_type="pitching_stat", answer=1998, config={}, created_at=datetime.now(UTC))
         ]
-        self.mock_guessr_dao.get_puzzles_by_ids.return_value = puzzles
+        self.mock_guessr_dao.get_puzzles_by_guessr_id.return_value = puzzles
 
-        guesses = [
-            GuessItem(id=1, year=2000),
-            GuessItem(id=2, year=1998)
-        ]
+        # Any guess will fail due to incomplete puzzle set
+        guesses = [GuessItem(id=0, year=2000)]
 
-        with pytest.raises(ValueError, match="Puzzle 2 belongs to"):
-            self.service.validate_guesses(guessr_id=1, guesses=guesses)
+        with pytest.raises(ValueError, match="Expected 3 puzzles for guessr 42, found 2"):
+            self.service.validate_guesses(guessr_id=42, guesses=guesses)
