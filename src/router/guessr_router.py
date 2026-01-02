@@ -6,12 +6,23 @@ from src.config.dependency import get_guessr_service, get_content_service
 from src.service.guessr_service import GuessrService
 from src.service.content_service import ContentService
 from src.model.view.guessr_list_view import GuessrListView
+from src.model.view.guessr_item_view import GuessrItemView
 from src.model.view.batch_guess_validation_view import BatchGuessValidationView
 from src.model.view.content_view import ContentView
 from src.model.api.batch_guess_request import BatchGuessRequest
 
 
 router = APIRouter(prefix="/guessr", tags=["guessr"])
+
+
+@router.get("/summary", response_model=list[GuessrItemView])
+async def get_all_guessrs(service: GuessrService = Depends(get_guessr_service)):
+    """
+    Get all available guessrs ordered by date (newest first).
+    Public endpoint - no authentication required.
+    Returns a list of guessr entries with id and date.
+    """
+    return service.get_all_guessrs()
 
 
 def _validate_date_range(puzzle_date: date) -> None:
