@@ -25,11 +25,9 @@ async def get_all_guessrs(service: GuessrService = Depends(get_guessr_service)):
     return service.get_all_guessrs()
 
 
-def _validate_date_range(puzzle_date: date) -> None:
+def _validate_date_not_future(puzzle_date: date) -> None:
     """
-    Validate that the requested date is within the allowed range.
-    - Cannot be in the future
-    - Cannot be more than 7 days in the past
+    Validate that the requested date is not in the future.
     """
     eastern = ZoneInfo("America/New_York")
     current_date_et = datetime.now(eastern).date()
@@ -38,13 +36,6 @@ def _validate_date_range(puzzle_date: date) -> None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot request puzzles for future dates. Current date (US Eastern): {current_date_et}"
-        )
-
-    oldest_allowed_date = current_date_et - timedelta(days=7)
-    if puzzle_date < oldest_allowed_date:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot request puzzles older than 7 days. Oldest allowed date: {oldest_allowed_date}"
         )
 
 
@@ -56,10 +47,10 @@ async def get_puzzles(
     """
     Get guessr (3 puzzles) for a specific date.
     Public endpoint - no authentication required.
-    Only allows dates within 7 days (past to present, US Eastern time).
+    Only prevents requesting future dates.
     Returns guessr ID which can be used for POST validation.
     """
-    _validate_date_range(date)
+    _validate_date_not_future(date)
     return service.get_puzzles_for_date(date)
 
 
