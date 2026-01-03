@@ -26,6 +26,27 @@ class GuessrService:
         self.guessr_dao = guessr_dao
         self.baseball_dao = baseball_dao
 
+    @staticmethod
+    def _get_league_for_award(award: str, year: int) -> str:
+        """
+        Determine the correct league identifier for an award based on year.
+        Some awards were given as "ML" (Major League) before they split into AL/NL.
+
+        Args:
+            award: The award name
+            year: The year of the award
+
+        Returns:
+            "ML" if the award was combined that year, "AL" or "NL" otherwise
+        """
+        if award == "Cy Young Award" and year < 1967:
+            return "ML"
+        elif award == "Rookie of the Year" and year < 1949:
+            return "ML"
+        else:
+            # Return None to indicate we should use the randomly selected league
+            return None
+
     def get_puzzles_for_date(self, puzzle_date: date) -> GuessrListView:
         """
         Get 3 puzzles for a specific date.
@@ -181,7 +202,12 @@ class GuessrService:
                 elif puzzle_type == "award_votes":
                     award = rng.choice(["Most Valuable Player", "Cy Young Award", "Rookie of the Year"])
                     config_key = award
-                    config = {"league": league, "award": award}
+                    # Use ML for awards that weren't split into AL/NL yet
+                    award_league = self._get_league_for_award(award, answer)
+                    if award_league:
+                        config = {"league": award_league, "award": award}
+                    else:
+                        config = {"league": league, "award": award}
                 else:
                     position = rng.choice(["C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"])
                     config_key = position
@@ -192,13 +218,13 @@ class GuessrService:
                     break
 
             if puzzle_type == "batting_stat":
-                players = self.baseball_dao.get_top_batting_leaders(answer, league, config["stat"], 10)
+                players = self.baseball_dao.get_top_batting_leaders(answer, config["league"], config["stat"], 10)
             elif puzzle_type == "pitching_stat":
-                players = self.baseball_dao.get_top_pitching_leaders(answer, league, config["stat"], 10)
+                players = self.baseball_dao.get_top_pitching_leaders(answer, config["league"], config["stat"], 10)
             elif puzzle_type == "award_votes":
-                players = self.baseball_dao.get_award_vote_getters(answer, league, config["award"], 10)
+                players = self.baseball_dao.get_award_vote_getters(answer, config["league"], config["award"], 10)
             else:
-                players = self.baseball_dao.get_starters_for_position(answer, league, config["position"])
+                players = self.baseball_dao.get_starters_for_position(answer, config["league"], config["position"])
 
             puzzle_orm = GuessrPuzzleORM(
                 guessr_id=guessr.id,
