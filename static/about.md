@@ -1,6 +1,6 @@
 # About Me
 
-My name is Ethan and I've been a hobby programmer since I was 15 years old, writing Java code with my friends during school lunch-time. This inspired me to study Computer Science in college at Rensselaer Polytechnic Institute. Now I am a full-time Software Engineer.
+My name is Ethan and I've been a hobby programmer since I was 15 years old.
 
 I love building things with code. The website you're on right now is a labor of love and the culmination of years of accumulated knowledge.
 
