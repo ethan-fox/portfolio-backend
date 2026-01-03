@@ -64,6 +64,17 @@ class GuessrDAO:
             .filter(GuessrORM.date == puzzle_date)\
             .first()
 
+    def get_all_guessrs(self) -> list[GuessrORM]:
+        """
+        Get all guessrs ordered by date descending (newest first).
+
+        Returns:
+            List of all GuessrORM instances
+        """
+        return self.db.query(GuessrORM)\
+            .order_by(GuessrORM.date.desc())\
+            .all()
+
     def create_puzzle(self, puzzle: GuessrPuzzleORM) -> GuessrPuzzleORM:
         """
         Create a new puzzle for a guessr.

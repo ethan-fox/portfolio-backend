@@ -7,6 +7,7 @@ from src.dao.guessr_dao import GuessrDAO
 from src.dao.baseball_csv_dao import BaseballCSVDAO
 from src.model.view.guessr_puzzle_view import GuessrPuzzleView
 from src.model.view.guessr_list_view import GuessrListView
+from src.model.view.guessr_item_view import GuessrItemView
 from src.model.view.guess_validation_view import GuessValidationView
 from src.model.view.batch_guess_validation_view import BatchGuessValidationView
 from src.model.api.guess_item import GuessItem
@@ -82,6 +83,19 @@ class GuessrService:
         overall_score = total_score + 1
 
         return BatchGuessValidationView(results=results, overall_score=overall_score)
+
+    def get_all_guessrs(self) -> list[GuessrItemView]:
+        """
+        Get all available guessrs ordered by date (newest first).
+
+        Returns:
+            List of GuessrItemView with id and date for each guessr
+        """
+        guessrs = self.guessr_dao.get_all_guessrs()
+        return [
+            GuessrItemView(id=guessr.id, date=str(guessr.date))
+            for guessr in guessrs
+        ]
 
     def _validate_single_guess(self, guess: GuessItem, puzzle: GuessrPuzzleORM) -> GuessValidationView:
         """
@@ -169,7 +183,7 @@ class GuessrService:
                     config_key = award
                     config = {"league": league, "award": award}
                 else:
-                    position = rng.choice(["C", "1B", "2B", "3B", "SS"])
+                    position = rng.choice(["C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"])
                     config_key = position
                     config = {"league": league, "position": position}
 
